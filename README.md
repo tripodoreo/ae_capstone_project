@@ -125,26 +125,16 @@ erDiagram
 graph LR
     A[Ingest Raw Data] --> |"raw_transactions"| B[Validate Data]
     B --> C[Transform Data]
-    D[Historical Prices] --> |"eth_historical_pricing"| C
-    
+    D[Ingest Raw Data] --> |"eth_historical_pricing"| E[Validate Data]
+
     subgraph Transform Tasks
-    C --> E[Calculate USD Values]
-    E --> F[Add Wallet Prefix]
+    C --> G[Add Wallet Prefix]
+    E --> F[Calculate USD Values]
+    G --> H[Join Tables]
+    F --> H
     end
     
-    F --> G[Load to Final Table]
-    
-    %% Add descriptions
-    G --> |"wallet_transactions"| H[End]
-    
-    %% Style nodes
-    style A fill:#93c5fd
-    style B fill:#93c5fd
-    style C fill:#93c5fd
-    style D fill:#bfdbfe
-    style E fill:#93c5fd
-    style F fill:#93c5fd
-    style G fill:#93c5fd
+    H --> |"wallet_transactions"| I[Load to Final Table]
     
 ```
 
