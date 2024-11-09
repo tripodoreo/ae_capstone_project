@@ -6,8 +6,7 @@
 - **Owner**: Johnny Chan
 - **Last Updated**: 11/9/2024
 
-## 2. Data Model
-### 2.1 Source Data Schemas
+### Source Data Schemas
 ```sql
 -- Historical/Accurate Pricing
 CREATE TABLE eth_historical_pricing (
@@ -46,7 +45,7 @@ WITH (
 )
 ```
 
-### 2.2 Transformed Data Schemas
+### Transformed Data Schemas
 ```sql
 -- Final Schema
 CREATE TABLE wallet_transactions (
@@ -71,7 +70,7 @@ WITH (
 )
 ```
 
-### 2.3 Data Model Diagram
+### Data Model Diagram
 ```mermaid
 erDiagram
     RAW_DATA ||--o{ PROCESSED_DATA : transforms
