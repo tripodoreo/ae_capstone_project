@@ -123,10 +123,11 @@ erDiagram
 ### DAG Structure
 ```mermaid
 graph LR
-    A[Raw Data Ingestion] --> B[Data Validation\n& Cleaning]
+    A[Raw Transaction Data Ingestion] --> B[Data Validation]
     B --> C[Transform]
 
-    D[Ingest Historical Prices] --> C
+    D[Raw Price Data Ingestion] --> E[Data Validation]
+    E --> F[Transform]
     
 ```
 
