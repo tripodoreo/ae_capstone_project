@@ -1,6 +1,6 @@
 # Data Project Specification
 
-## 1. Project Overview
+## Project Overview
 - **Project Name**: Wallet Transaction Accounting Tool
 - **Description**: A comprehensive tool designed to simplify the accounting of Ethereum-based transactions, including detailed tracking of gas fees. This project allows users to accurately calculate the cost basis, track proceeds, and categorize expenses associated with buying, selling, and transferring assets on the Ethereum blockchain for easy export for accountants.
 - **Owner**: Johnny Chan
@@ -96,7 +96,7 @@ erDiagram
        timestamp ingestion_time
    }
    wallet_transactions {
-       varchar wallet_address
+       varchar wallet_address "PK"
        varchar tx_id "FK"
        timestamp tx_time
        varchar tx_type
@@ -120,17 +120,17 @@ erDiagram
 %% wallet_transactions: partitioned by [dt, wallet_prefix]
 ```
 
-## 3. Data Pipeline
-### 3.1 DAG Structure
+### DAG Structure
 ```mermaid
 graph LR
-    A[Raw Data Ingestion] --> B[Data Validation]
+    A[Pricing Data Ingestion] --> B[Data Validation]
+    A[Wallet Transactions] --> B[Data Validation]
     B --> C[Transform]
     C --> D[Quality Checks]
     D --> E[Load Final Table]
 ```
 
-### 3.2 Processing Steps
+### Processing Steps
 1. Raw Data Ingestion
    - Frequency: Hourly
    - Source: [Source System]
