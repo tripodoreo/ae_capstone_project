@@ -123,7 +123,7 @@ erDiagram
 ### DAG Structure
 ```mermaid
 graph LR
-    A[Ingest Raw Data] --> B[Validate Data]
+    A[Ingest Raw Data] --> |"raw_transactions"| B[Validate Data]
     B --> C[Transform Data]
     D[Historical Prices] --> C
     
