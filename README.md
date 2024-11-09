@@ -123,11 +123,30 @@ erDiagram
 ### DAG Structure
 ```mermaid
 graph LR
-    A[Raw Transaction Data Ingestion] --> B[Data Validation]
-    B --> C[Transform]
-
-    D[Raw Price Data Ingestion] --> E[Data Validation]
-    E --> F[Transform]
+    A[Ingest Raw Data] --> B[Validate Data]
+    B --> C[Transform Data]
+    D[Historical Prices] --> C
+    
+    subgraph Transform Tasks
+    C --> E[Calculate USD Values]
+    E --> F[Add Wallet Prefix]
+    end
+    
+    F --> G[Load to Final Table]
+    
+    %% Add descriptions
+    A --> |"raw_transactions"| B
+    D --> |"eth_historical_pricing"| C
+    G --> |"wallet_transactions"| H[End]
+    
+    %% Style nodes
+    style A fill:#93c5fd
+    style B fill:#93c5fd
+    style C fill:#93c5fd
+    style D fill:#bfdbfe
+    style E fill:#93c5fd
+    style F fill:#93c5fd
+    style G fill:#93c5fd
     
 ```
 
