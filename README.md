@@ -125,7 +125,7 @@ erDiagram
 graph LR
     A[Ingest Raw Data] --> |"raw_transactions"| B[Validate Data]
     B --> C[Transform Data]
-    D[Historical Prices] --> C
+    D[Historical Prices] --> |"eth_historical_pricing"| C
     
     subgraph Transform Tasks
     C --> E[Calculate USD Values]
@@ -135,8 +135,6 @@ graph LR
     F --> G[Load to Final Table]
     
     %% Add descriptions
-    A --> |"raw_transactions"| B
-    D --> |"eth_historical_pricing"| C
     G --> |"wallet_transactions"| H[End]
     
     %% Style nodes
