@@ -1,38 +1,74 @@
 # Data Project Specification
 
 ## 1. Project Overview
-- **Project Name**: [Name]
-- **Description**: Brief description of project goals and business value
-- **Owner**: [Name/Team]
-- **Last Updated**: [Date]
+- **Project Name**: Wallet Transaction Accounting Tool
+- **Description**: A comprehensive tool designed to simplify the accounting of Ethereum-based transactions, including detailed tracking of gas fees. This project allows users to accurately calculate the cost basis, track proceeds, and categorize expenses associated with buying, selling, and transferring assets on the Ethereum blockchain for easy export for accountants.
+- **Owner**: Johnny Chan
+- **Last Updated**: 11/9/2024
 
 ## 2. Data Model
 ### 2.1 Source Data Schemas
 ```sql
--- Example Raw Data Schema
-CREATE TABLE raw_data (
-    id INT,
-    timestamp TIMESTAMP,
-    value FLOAT,
-    category STRING,
-    metadata MAP<STRING, STRING>
+-- Historical/Accurate Pricing
+CREATE TABLE eth_historical_pricing (
+    ticker INT,
+    price_time TIMESTAMP(0),
+    price_usdc FLOAT,
+    dt DATE,
+    source VARCHAR
 )
-USING iceberg
-PARTITIONED BY (days(timestamp));
+WITH (
+    format = 'PARQUET',
+    partitioning = ARRAY['dt']
+)
+```
+
+```sql
+--- Wallet Transactions
+CREATE TABLE raw_transactions (
+    wallet_address VARCHAR,
+    tx_id VARCHAR PRIMARY,
+    tx_time TIMESTAMP(0),
+    tx_type VARCHAR,
+    is_sender BOOLEAN,
+    ticker_sent VARCHAR,
+    amount_sent FLOAT,
+    ticker_received VARCHAR,
+    amount_received FLOAT,
+    gas_amount FLOAT,
+    ticker_main VARCHAR,
+    dt DATE,
+    ingestion_time TIMESTAMP(0)  -- Add processing metadata
+)
+WITH (
+    format = 'PARQUET',
+    partitioning = ARRAY['dt', 'ticker_main']
+)
 ```
 
 ### 2.2 Transformed Data Schemas
 ```sql
--- Example Final Table Schema
-CREATE TABLE processed_data (
-    record_id INT,
-    process_timestamp TIMESTAMP,
-    aggregated_value FLOAT,
-    category STRING,
-    quality_score FLOAT
+-- Final Schema
+CREATE TABLE wallet_transactions (
+    wallet_address VARCHAR,
+    tx_id VARCHAR,           -- Add to trace back to raw
+    tx_time TIMESTAMP(0),
+    tx_type VARCHAR,
+    dt DATE,
+    ticker_sent VARCHAR,
+    amount_sent FLOAT,
+    ticker_received VARCHAR,
+    amount_received FLOAT,
+    gas_cost FLOAT,
+    gas_cost_usdc FLOAT,
+    total_value_usdc FLOAT,
+    last_updated_at TIMESTAMP(0),
+    wallet_prefix VARCHAR -- 0xXX
 )
-USING iceberg
-PARTITIONED BY (month(process_timestamp));
+WITH (
+    format = 'PARQUET',
+    partitioning = ARRAY['dt','wallet_prefix']
+)
 ```
 
 ### 2.3 Data Model Diagram
