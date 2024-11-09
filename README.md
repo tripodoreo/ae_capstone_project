@@ -73,20 +73,51 @@ WITH (
 ### Data Model Diagram
 ```mermaid
 erDiagram
-    RAW_DATA ||--o{ PROCESSED_DATA : transforms
-    RAW_DATA {
-        int id
-        timestamp timestamp
-        float value
-        string category
-    }
-    PROCESSED_DATA {
-        int record_id
-        timestamp process_timestamp
-        float aggregated_value
-        string category
-        float quality_score
-    }
+   eth_historical_pricing {
+       int ticker
+       timestamp price_time
+       float price_usdc
+       date dt
+       varchar source
+   }
+   raw_transactions {
+       varchar wallet_address "FK"
+       varchar tx_id "PK"
+       timestamp tx_time
+       varchar tx_type
+       boolean is_sender
+       varchar ticker_sent
+       float amount_sent 
+       varchar ticker_received
+       float amount_received
+       float gas_amount
+       varchar ticker_main
+       date dt
+       timestamp ingestion_time
+   }
+   wallet_transactions {
+       varchar wallet_address
+       varchar tx_id "FK"
+       timestamp tx_time
+       varchar tx_type
+       date dt
+       varchar ticker_sent
+       float amount_sent
+       varchar ticker_received
+       float amount_received
+       float gas_cost
+       float gas_cost_usdc
+       float total_value_usdc
+       timestamp last_updated_at
+       varchar wallet_prefix
+   }
+
+   raw_transactions ||--|{ wallet_transactions : "transforms_to"
+   eth_historical_pricing ||--|{ wallet_transactions : "provides_pricing"
+
+%% eth_historical_pricing: partitioned by [dt]
+%% raw_transactions: partitioned by [dt, ticker_main] 
+%% wallet_transactions: partitioned by [dt, wallet_prefix]
 ```
 
 ## 3. Data Pipeline
