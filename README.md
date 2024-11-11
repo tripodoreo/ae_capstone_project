@@ -8,7 +8,7 @@
 
 ### Source Data Schemas
 ```sql
--- Historical USDC Price Swaps (Minute accurate pricing)
+-- Historical USDC/T Price Swaps (Minute accurate pricing)
 CREATE TABLE raw_eth_min_historical_pricing (
     tx_id VARCHAR,
     tx_time TIMESTAMP(0),
@@ -69,8 +69,8 @@ CREATE TABLE eth_pricing (
     dt_time TIMESTAMP(0),
     open_price_usd FLOAT,
     close_price_usd FLOAT,
-    min_median_price_usdc FLOAT,
-    min_avg_price_usdc FLOAT,
+    min_median_price_usd FLOAT,
+    min_avg_price_usd FLOAT,
 )
 WITH (
     format = 'PARQUET',
@@ -87,7 +87,7 @@ CREATE TABLE wallet_transactions (
     dt DATE,
     eth_open_price_usd FLOAT,
     eth_close_price_usd FLOAT,
-    eth_min_median_price_usdc FLOAT,
+    eth_min_median_price_usd FLOAT,
     ticker_sent VARCHAR,
     amount_sent FLOAT,
     ticker_received VARCHAR,
@@ -145,8 +145,8 @@ erDiagram
         timestamp dt_time
         float open_price_usd
         float close_price_usd
-        float min_median_price_usdc
-        float min_avg_price_usdc
+        float min_median_price_usd
+        float min_avg_price_usd
     }
 
     wallet_transactions {
@@ -157,7 +157,7 @@ erDiagram
         date dt
         float eth_open_price_usd
         float eth_close_price_usd
-        float eth_min_median_price_usdc
+        float eth_min_median_price_usd
         varchar ticker_sent
         float amount_sent
         varchar ticker_received
@@ -198,8 +198,12 @@ graph LR
 ### Processing Steps
 1. Raw Pricing Data
    - Frequency: Hourly
-   - Source: Uniswap v2 and v3 USDC Swap Transactions
+   - Source: Uniswap v2 and v3 USDC/T Swap Transactions
    - Target: S3 Bucket
+2. Raw Daily Pricing Data
+   - Frequency: Daily
+   - Source: Coingecko API
+   - Target S3 Bucket
 
 2. Wallet Transactions
    - Frequency: On-Demand + (Potential periodic scan)
@@ -208,15 +212,14 @@ graph LR
 
 2. Transform 
    - Pricing Data (ETH)
-    - Aggregation (Aggregating all swap prices by minute)
-    - Calculations (Median price to reduce outliers as best as possible/Can add AVG as a column as well)
+    - Aggregation
+    - Price enrichment
+    - Calculations
    - Wallet Transactions
-    - Enrichments (Wallet prefix)
-    - Calculations (Is_sender logic to join on ETH)
+    - Enrichment
 
 3. Quality Checks
    - Schema validation
-   - Business rule validation
    - Data quality metrics
 
 ## 4. Data Quality Framework
@@ -224,15 +227,46 @@ graph LR
 ```python
 quality_checks = {
     'completeness': {
-        'missing_values': 'count(case when col is null then 1 end) / count(*)',
-        'empty_strings': 'count(case when col = "" then 1 end) / count(*)'
+        # Transaction checks
+        'raw_tx_completeness': '''
+            SELECT dt,
+                COUNT(CASE WHEN tx_id IS NULL THEN 1 END) / COUNT(*) as missing_tx_id,
+                COUNT(CASE WHEN wallet_address IS NULL THEN 1 END) / COUNT(*) as missing_wallet,
+                COUNT(CASE WHEN tx_time IS NULL THEN 1 END) / COUNT(*) as missing_time
+            FROM raw_transactions
+            GROUP BY dt
+        ''',
+        
+        # Pricing Data checks
+        'price_completeness': '''
+            SELECT dt,
+                COUNT(CASE WHEN open_price_usd IS NULL THEN 1 END) / COUNT(*) as missing_open,
+                COUNT(CASE WHEN close_price_usd IS NULL THEN 1 END) / COUNT(*) as missing_close
+            FROM raw_eth_historical_pricing
+            GROUP BY dt
+        '''
     },
+    
     'accuracy': {
-        'value_range': 'count(case when value between 0 and 100 then 1 end) / count(*)',
-        'valid_categories': 'count(case when category in ("A", "B", "C") then 1 end) / count(*)'
-    },
-    'timeliness': {
-        'processing_lag': 'avg(timestamp_diff(process_time, event_time, HOUR))'
+        # Price range checks
+        'price_accuracy': '''
+            SELECT dt,
+                COUNT(CASE WHEN open_price_usd < 0 THEN 1 END) / COUNT(*) as negative_open,
+                COUNT(CASE WHEN close_price_usd < 0 THEN 1 END) / COUNT(*) as negative_close,
+                COUNT(CASE WHEN ABS(open_price_usd - close_price_usd)/open_price_usd > 0.3 THEN 1 END) / COUNT(*) as suspicious_price_movement
+            FROM raw_eth_historical_pricing
+            GROUP BY dt
+        ''',
+        
+        # Transaction amount checks
+        'transaction_accuracy': '''
+            SELECT dt,
+                COUNT(CASE WHEN amount_sent < 0 THEN 1 END) / COUNT(*) as negative_sends,
+                COUNT(CASE WHEN amount_received < 0 THEN 1 END) / COUNT(*) as negative_receives,
+                COUNT(CASE WHEN gas_amount < 0 THEN 1 END) / COUNT(*) as negative_gas
+            FROM raw_transactions
+            GROUP BY dt
+        '''
     }
 }
 ```
