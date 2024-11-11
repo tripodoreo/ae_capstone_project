@@ -2,7 +2,7 @@
 
 ## Project Overview
 - **Project Name**: Wallet Transaction Accounting Tool
-- **Description**: A comprehensive tool designed to simplify the accounting of Ethereum-based transactions, including detailed tracking of gas fees. This project allows users to accurately calculate the cost basis, track proceeds, and categorize expenses associated with buying, selling, and transferring assets on the Ethereum blockchain for easy export for accountants.
+- **Description**: A tool designed to simplify the accounting of Ethereum-based transactions, including detailed tracking of gas fees. This project allows users to accurately calculate the cost basis, track proceeds, and categorize expenses associated with buying, selling, and transferring assets on the Ethereum blockchain for easy export for accountants.
 - **Owner**: Johnny Chan
 - **Last Updated**: 11/9/2024
 
@@ -222,8 +222,7 @@ graph LR
    - Schema validation
    - Data quality metrics
 
-## 4. Data Quality Framework
-### 4.1 Quality Metrics
+### Data Quality Framework
 ```python
 quality_checks = {
     'completeness': {
@@ -248,16 +247,6 @@ quality_checks = {
     },
     
     'accuracy': {
-        # Price range checks
-        'price_accuracy': '''
-            SELECT dt,
-                COUNT(CASE WHEN open_price_usd < 0 THEN 1 END) / COUNT(*) as negative_open,
-                COUNT(CASE WHEN close_price_usd < 0 THEN 1 END) / COUNT(*) as negative_close,
-                COUNT(CASE WHEN ABS(open_price_usd - close_price_usd)/open_price_usd > 0.3 THEN 1 END) / COUNT(*) as suspicious_price_movement
-            FROM raw_eth_historical_pricing
-            GROUP BY dt
-        ''',
-        
         # Transaction amount checks
         'transaction_accuracy': '''
             SELECT dt,
@@ -271,72 +260,40 @@ quality_checks = {
 }
 ```
 
-### 4.2 Quality Thresholds
+### Quality Thresholds
 | Metric | Threshold | Severity |
 |--------|-----------|----------|
 | Missing Values | < 5% | Critical |
-| Value Range | > 95% | Warning |
-| Processing Lag | < 2 hours | Critical |
+| Negative Values | < 1% | Critical |
 
-## 5. Infrastructure
-### 5.1 Storage
-- Raw Zone: `s3://bucket/raw/`
-- Processed Zone: `s3://bucket/processed/`
+### Infrastructure
+#### Storage
+- Raw: `s3`
+- Processed: `s3://bucket/processed/`
 - File Format: Parquet
-- Partitioning Strategy: Daily partitions
 
-### 5.2 Processing
-- Engine: Spark/Trino
-- Resource Configuration:
-  ```yaml
-  spark:
-    executor.instances: 4
-    executor.memory: 8g
-    executor.cores: 4
-  ```
+### Processing
+- Trino
 
-## 6. Monitoring
-### 6.1 SLAs
-- Data Freshness: < 3 hours
+### Monitoring
+- Data Freshness: < 24 hours
 - Pipeline Duration: < 1 hour
 - Quality Score: > 95%
 
-### 6.2 Alerts
+### Alerts
 | Alert | Condition | Channel |
 |-------|-----------|---------|
-| Late Data | lag > 3 hours | Slack #data-alerts |
-| Quality Failed | score < 95% | Email + Slack |
-| Pipeline Failed | status = 'FAILED' | PagerDuty |
+| Late Data | lag > 24 hours | Email |
+| Quality Failed | score < 95% | Email |
+| Pipeline Failed | status = 'FAILED' | Email |
 
-## 7. Testing Strategy
-### 7.1 Unit Tests
-```python
-def test_data_quality():
-    # Test completeness
-    assert check_missing_values(df) < 0.05
-    # Test accuracy
-    assert check_value_ranges(df) > 0.95
-```
-
-### 7.2 Integration Tests
-- End-to-end pipeline validation
-- Cross-system data consistency
-- Performance benchmarks
-
-## 8. Dependencies
+### Dependencies
 - External Systems
 - APIs
 - Libraries
 - Credentials
 
-## 9. Runbook
-### 9.1 Pipeline Operation
-```bash
-# Example commands
-spark-submit job.py --date 2024-01-01
-```
-
-### 9.2 Troubleshooting
+### Troubleshooting
 - Common Issues
 - Resolution Steps
 - Support Contacts
