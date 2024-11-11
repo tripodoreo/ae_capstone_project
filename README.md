@@ -52,7 +52,6 @@ CREATE TABLE raw_transactions (
     ticker_received VARCHAR,
     amount_received FLOAT,
     gas_amount FLOAT,
-    ticker_main VARCHAR,
     dt DATE,
     ingestion_time TIMESTAMP(0)  -- Add processing metadata
 )
@@ -137,7 +136,6 @@ erDiagram
         varchar ticker_received
         float amount_received
         float gas_amount
-        varchar ticker_main
         date dt
         timestamp ingestion_time
     }
