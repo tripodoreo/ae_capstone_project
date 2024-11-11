@@ -177,19 +177,22 @@ erDiagram
 ### DAG Structure
 ```mermaid
 graph LR
-    A[Ingest Raw Transactions Data] --> |"raw_transactions"| B[Validate Data]
-    B --> C[Transform Data]
-    D[Ingest Raw Price Swap Data] --> |"eth_historical_pricing"| E[Validate Data]
-
-    subgraph Transform Tasks
-    C --> G[Add Wallet Prefix]
-    E --> F[Calculate USD Values]
-    G --> H[Join Tables]
-    F --> H
+    subgraph Raw Source Data
+        A[raw_eth_min_historical_pricing] 
+        B[raw_eth_historical_pricing]
+        C[raw_transactions]
     end
-    
-    H --> |"wallet_transactions"| I[Load to Final Table]
-    
+
+    subgraph Transform
+        D[eth_pricing]
+    end
+
+    E[wallet_transactions]
+
+    A -->|Minute price aggregation| D
+    B -->|Daily price data| D
+    C -->|Transaction details| E
+    D -->|Price enrichment| E
 ```
 
 ### Processing Steps
