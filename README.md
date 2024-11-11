@@ -107,54 +107,73 @@ WITH (
 ### Data Model Diagram
 ```mermaid
 erDiagram
-   eth_historical_pricing {
-       int ticker
-       timestamp price_time
-       float price_usdc_median
-       float price_usdc_avg
-       date dt
-       varchar source
-   }
-   raw_transactions {
-       varchar wallet_address "FK"
-       varchar tx_id "PK"
-       timestamp tx_time
-       varchar tx_type
-       boolean is_sender
-       varchar ticker_sent
-       float amount_sent 
-       varchar ticker_received
-       float amount_received
-       float gas_amount
-       varchar ticker_main
-       date dt
-       timestamp ingestion_time
-       varchar main_ticker
-       float main_ticker_amount
-   }
-   wallet_transactions {
-       varchar wallet_address "PK"
-       varchar tx_id "FK"
-       timestamp tx_time
-       varchar tx_type
-       date dt
-       varchar ticker_sent
-       float amount_sent
-       varchar ticker_received
-       float amount_received
-       float gas_cost
-       float gas_cost_usdc
-       float total_value_usdc
-       timestamp last_updated_at
-       varchar wallet_prefix
-   }
+    raw_eth_min_historical_pricing {
+        varchar tx_id PK
+        timestamp tx_time
+        varchar sent_ticker
+        float sent_amount
+        varchar received_ticker
+        float received_amount
+        date dt
+        varchar source
+    }
 
-   raw_transactions ||--|{ wallet_transactions : "transforms_to"
-   eth_historical_pricing ||--|{ wallet_transactions : "provides_pricing"
+    raw_eth_historical_pricing {
+        date dt PK
+        varchar ticker PK
+        float open_price_usd
+        float close_price_usd
+        varchar source
+    }
 
-%% eth_historical_pricing: partitioned by [dt]
-%% raw_transactions: partitioned by [dt, ticker_main] 
-%% wallet_transactions: partitioned by [dt, wallet_prefix]
+    raw_transactions {
+        varchar tx_id PK
+        varchar wallet_address
+        timestamp tx_time
+        varchar tx_type
+        boolean is_sender
+        varchar ticker_sent
+        float amount_sent
+        varchar ticker_received
+        float amount_received
+        float gas_amount
+        varchar ticker_main
+        date dt
+        timestamp ingestion_time
+    }
+
+    eth_pricing {
+        date dt PK
+        timestamp dt_time
+        float open_price_usd
+        float close_price_usd
+        float min_median_price_usdc
+        float min_avg_price_usdc
+    }
+
+    wallet_transactions {
+        varchar tx_id PK
+        varchar wallet_address
+        timestamp tx_time
+        varchar tx_type
+        date dt
+        float eth_open_price_usd
+        float eth_close_price_usd
+        float eth_min_median_price_usdc
+        varchar ticker_sent
+        float amount_sent
+        varchar ticker_received
+        float amount_received
+        float gas_cost
+        boolean is_eth_sent
+        timestamp last_updated_at
+        varchar wallet_prefix
+    }
+
+    raw_transactions ||--o{ wallet_transactions : "transforms_to"
+    raw_eth_historical_pricing ||--o{ eth_pricing : "aggregates_to"
+    raw_eth_min_historical_pricing ||--o{ eth_pricing : "aggregates_to"
+    eth_pricing ||--o{ wallet_transactions : "provides_pricing"
 ```
 
 ### DAG Structure
