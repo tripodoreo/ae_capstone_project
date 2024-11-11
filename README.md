@@ -8,11 +8,14 @@
 
 ### Source Data Schemas
 ```sql
--- Historical/Accurate Pricing
-CREATE TABLE eth_historical_pricing (
-    ticker INT,
-    price_time TIMESTAMP(0),
-    price_usdc FLOAT,
+-- Historical USDC Price Swaps (Minute accurate pricing)
+CREATE TABLE raw_eth_min_historical_pricing (
+    tx_id VARCHAR,
+    tx_time TIMESTAMP(0),
+    sent_ticker VARCHAR,
+    sent_amount FLOAT,
+    received_ticker VARCHAR,
+    received_amount FLOAT,
     dt DATE,
     source VARCHAR
 )
@@ -23,7 +26,21 @@ WITH (
 ```
 
 ```sql
---- Wallet Transactions
+-- Historical Price Open/Close (Coingecko)
+CREATE TABLE raw_eth_historical_pricing (
+    dt DATE,
+    ticker VARCHAR,
+    open_price_usd FLOAT,
+    close_price_usd FLOAT,
+    source VARCHAR
+)
+WITH (
+    format = 'PARQUET',
+)
+```
+
+```sql
+--- Raw Wallet Transactions
 CREATE TABLE raw_transactions (
     wallet_address VARCHAR,
     tx_id VARCHAR PRIMARY,
@@ -47,6 +64,21 @@ WITH (
 
 ### Transformed Data Schemas
 ```sql
+-- Historic ETH pricing table
+CREATE TABLE eth_pricing (
+    dt DATE,
+    dt_time TIMESTAMP(0),
+    open_price_usd FLOAT,
+    close_price_usd FLOAT,
+    min_median_price_usdc FLOAT,
+    min_avg_price_usdc FLOAT,
+)
+WITH (
+    format = 'PARQUET',
+    partitioning = ARRAY['dt']
+)
+```
+```sql
 -- Final Schema
 CREATE TABLE wallet_transactions (
     wallet_address VARCHAR,
@@ -54,13 +86,15 @@ CREATE TABLE wallet_transactions (
     tx_time TIMESTAMP(0),
     tx_type VARCHAR,
     dt DATE,
+    eth_open_price_usd FLOAT,
+    eth_close_price_usd FLOAT,
+    eth_min_median_price_usdc FLOAT,
     ticker_sent VARCHAR,
     amount_sent FLOAT,
     ticker_received VARCHAR,
     amount_received FLOAT,
     gas_cost FLOAT,
-    gas_cost_usdc FLOAT,
-    total_value_usdc FLOAT,
+    is_eth_sent BOOLEAN,
     last_updated_at TIMESTAMP(0),
     wallet_prefix VARCHAR -- 0xXX
 )
@@ -76,7 +110,8 @@ erDiagram
    eth_historical_pricing {
        int ticker
        timestamp price_time
-       float price_usdc
+       float price_usdc_median
+       float price_usdc_avg
        date dt
        varchar source
    }
@@ -94,6 +129,8 @@ erDiagram
        varchar ticker_main
        date dt
        timestamp ingestion_time
+       varchar main_ticker
+       float main_ticker_amount
    }
    wallet_transactions {
        varchar wallet_address "PK"
@@ -123,9 +160,9 @@ erDiagram
 ### DAG Structure
 ```mermaid
 graph LR
-    A[Ingest Raw Data] --> |"raw_transactions"| B[Validate Data]
+    A[Ingest Raw Transactions Data] --> |"raw_transactions"| B[Validate Data]
     B --> C[Transform Data]
-    D[Ingest Raw Data] --> |"eth_historical_pricing"| E[Validate Data]
+    D[Ingest Raw Price Swap Data] --> |"eth_historical_pricing"| E[Validate Data]
 
     subgraph Transform Tasks
     C --> G[Add Wallet Prefix]
@@ -139,15 +176,23 @@ graph LR
 ```
 
 ### Processing Steps
-1. Raw Data Ingestion
+1. Raw Pricing Data
    - Frequency: Hourly
-   - Source: [Source System]
-   - Target: S3 raw zone
+   - Source: Uniswap v2 and v3 USDC Swap Transactions
+   - Target: S3 Bucket
 
-2. Transform
-   - Aggregations
-   - Enrichments
-   - Calculations
+2. Wallet Transactions
+   - Frequency: On-Demand + (Potential periodic scan)
+   - Source: Infura/Alchemy Node
+   - Target: S3 Bucket
+
+2. Transform 
+   - Pricing Data (ETH)
+    - Aggregation (Aggregating all swap prices by minute)
+    - Calculations (Median price to reduce outliers as best as possible/Can add AVG as a column as well)
+   - Wallet Transactions
+    - Enrichments (Wallet prefix)
+    - Calculations (Is_sender logic to join on ETH)
 
 3. Quality Checks
    - Schema validation
