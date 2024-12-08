@@ -1,6 +1,4 @@
-# AE Project Writeup
-
-Last edited time: December 8, 2024 12:32 AM
+# Johnny's Analytics Engineering Pipeline
 
 # 1. Data Project Specification
 
