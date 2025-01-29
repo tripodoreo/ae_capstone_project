@@ -1,4 +1,4 @@
-# Johnny's Analytics Engineering Pipeline
+# Web3 Eth Wallet Insights Analytics Engineering Pipeline
 
 # 1. Data Project Specification
 
